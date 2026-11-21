@@ -1,0 +1,21 @@
+appId: com.dota.meta.assistant
+productName: Dota 2 Meta Assistant
+copyright: Copyright 2026 Dota 2 Meta Assistant
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - dist-electron/**
+extraResources:
+  - from: bin
+    to: bin
+    filter:
+      - code.exe
+win:
+  icon: build/icon.ico
+  target:
+    - target: portable
+      arch: x64
+  artifactName: Dota2-Meta-Assistant-${version}-portable.exe
+compression: maximum
