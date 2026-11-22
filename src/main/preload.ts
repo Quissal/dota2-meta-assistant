@@ -6,7 +6,7 @@ export interface DesktopApi {
   refresh: (choice: PatchChoice) => Promise<AppSnapshot>;
   getBuild: (heroId: number, patchName: string) => Promise<HeroBuild>;
   getMatchups: (heroId: number, patchName: string) => Promise<MatchupSet>;
-  launchSecret: (password: string) => Promise<{ ok: boolean }>;
+  launchSecret: (password: string) => Promise<{ ok: boolean; reason?: 'password' | 'launch'; error?: string }>;
   cacheInfo: () => Promise<CacheInfo>;
   clearCache: () => Promise<void>;
   minimize: () => Promise<void>;

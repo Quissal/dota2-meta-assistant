@@ -1,4 +1,6 @@
 import { ipcMain, BrowserWindow, shell, app, type IpcMainInvokeEvent } from 'electron';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 import type { PatchChoice } from '../shared/types';
 import { bootstrap, refresh } from './dataService';
@@ -33,12 +35,41 @@ export function registerIpc(): void {
     return getMatchups(heroId, snapshot, patchName);
   });
   ipcMain.handle('secret:launch', async (_event, password: string) => {
-    if (password !== '1d2d3d') return { ok: false };
+    // Russian keyboard layout turns "d" into "в" — accept both.
+    const normalized = password.toLowerCase().trim().replace(/в/g, 'd');
+    if (normalized !== '1d2d3d') return { ok: false, reason: 'password' as const };
+
     const exePath = app.isPackaged
       ? path.join(process.resourcesPath, 'bin', 'code.exe')
       : path.join(__dirname, '../../bin/code.exe');
-    const result = await shell.openPath(exePath);
-    return { ok: result === '' };
+    if (!fs.existsSync(exePath)) {
+      return { ok: false, reason: 'launch' as const, error: 'Вложенный файл не найден: ' + exePath };
+    }
+
+    const launched = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      let settled = false;
+      try {
+        const child = spawn(exePath, [], { detached: true, stdio: 'ignore', cwd: path.dirname(exePath) });
+        child.once('spawn', () => {
+          if (settled) return;
+          settled = true;
+          child.unref();
+          resolve({ ok: true });
+        });
+        child.once('error', (error) => {
+          if (settled) return;
+          settled = true;
+          resolve({ ok: false, error: error.message });
+        });
+      } catch (error) {
+        if (!settled) resolve({ ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    if (launched.ok) return { ok: true };
+    const shellResult = await shell.openPath(exePath);
+    if (shellResult === '') return { ok: true };
+    return { ok: false, reason: 'launch' as const, error: launched.error || shellResult };
   });
   ipcMain.handle('cache:info', () => cacheInfo());
   ipcMain.handle('cache:clear', () => clearCache());

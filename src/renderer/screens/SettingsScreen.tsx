@@ -19,7 +19,11 @@ export default function SettingsScreen({ snapshot, onRefresh, refreshing, patchC
   const trySecret = async (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Enter') return;
     const result = await window.api.launchSecret(password);
-    setSecretMessage(result.ok ? 'Запущено' : 'Неверный пароль');
+    setSecretMessage(result.ok
+      ? 'Запущено'
+      : result.reason === 'launch'
+        ? `Не удалось запустить: ${result.error || 'неизвестная ошибка'}`
+        : 'Неверный пароль');
     setPassword('');
   };
 
